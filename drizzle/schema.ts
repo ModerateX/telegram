@@ -37,6 +37,7 @@ export const groups = sqliteTable("groups", {
   did: text("did"),
   did_doc: text("did_doc"),
   role: text("role"),
+  verida: text("verida"),
   username: text("username"),
   name: text("name"),
   owner: integer("owner"),

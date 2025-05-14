@@ -2,7 +2,7 @@ import type { CommandContext, Context } from "grammy";
 import { db } from "../../drizzle/db";
 import { users } from "../../drizzle/schema";
 import type { InlineKeyboardButton } from "grammy/types";
-import { keyApi } from "../api";
+import { agentApi, keyApi, veridaApi } from "../api";
 import { createKey } from "../api/key";
 
 
@@ -11,7 +11,7 @@ export const start = async (ctx: CommandContext<Context>) => {
   const text = ctx.message?.text.split(" ")
   const payload = text?.length === 2 ? text[1] : undefined
   const _user = ctx.from
-  console.log({ text, groupId: payload })
+  console.log({ text, payload: payload })
   const user = await db.query.users.findFirst({
     where: (u, { eq }) => eq(u.id, Number(_user?.id))
   })
@@ -147,6 +147,31 @@ export const groups = async (ctx: CommandContext<Context>) => {
         [{ text: "Get Invite Link", callback_data: `invite:${group.id}` }],
       )
     }
+    if (!group.verida) {
+      // Build authentication URL
+      const AUTH_ENDPOINT = "https://app.verida.ai/auth";
+      const authLink = new URL(AUTH_ENDPOINT);
+
+      // Add scopes
+      authLink.searchParams.append("scopes", "api:ds-query");
+      authLink.searchParams.append("scopes", "api:llm-agent-prompt");
+
+      // Add your application URL
+      authLink.searchParams.append("redirectUrl", `${process.env.WEBSITE_BASE}/api/verida/${group.id}`);
+      authLink.searchParams.append("appDID", process.env.VERIDA_DID!);
+
+      // Application will pay for API requests
+      authLink.searchParams.append("payer", "app");
+
+      // Redirect user to start the authorization process
+      const url = authLink.toString();
+      inline_keyboard.push(
+        [{
+          text: "Connect Verida",
+          url
+        }]
+      )
+    }
     await ctx.reply(`Name: ${group.name} \n DID: ${group.did} \n My Role: ${group.role} \n Owner: ${group.owner} \n Added At: ${group.createdAt} \n\n`,
       {
         reply_markup: {
@@ -166,4 +191,31 @@ export const groups = async (ctx: CommandContext<Context>) => {
       }
     })
   }
+}
+
+export const ask = async (ctx: CommandContext<Context>) => {
+
+  const chat = ctx.chat
+  const text = ctx.message?.text.split("/ask ")
+  const payload = text?.length === 2 ? text[1] : undefined
+  const msg = await ctx.api.sendMessage(chat.id, `⏳ Loading...`, {
+    reply_parameters: {
+      message_id: ctx.message?.message_id!,
+    }
+  })
+  console.log({ text, payload })
+
+  if (chat.type === "channel" || chat.type === "private") {
+    // return await ctx.reply(` use this command in a group chat`)
+    return await ctx.api.editMessageText(chat.id, msg.message_id, "use this command in a group chat")
+  }
+
+  const group = await db.query.groups.findFirst({ where: (g, { eq }) => eq(g.id, chat?.id!) })
+  if (!group) return ctx.api.editMessageText(chat.id, msg.message_id, "Group not found!")
+  if (!group.verida) return ctx.api.editMessageText(chat.id, msg.message_id, "Group is not connected to Verida. Go to the bot pv Groups Settings to connect.")
+  if (!payload) {
+    return ctx.api.editMessageText(chat.id, msg.message_id, "Please provide a question to ask the group. \n\n Example: /ask Who are you?")
+  }
+  const response = await agentApi.ask(group.name!, payload, group.verida)
+  return ctx.api.editMessageText(chat.id, msg.message_id, `🤖 ${response}`)
 }

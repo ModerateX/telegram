@@ -16,6 +16,7 @@ bot.command("start", mainCommand.start);
 // bot.command("info", mainCommand.info);
 // bot.command("did", mainCommand.did);
 bot.command("groups", mainCommand.groups);
+bot.command("ask", mainCommand.ask);
 
 bot.on("my_chat_member", async (ctx) => {
   const chat = ctx.chat
