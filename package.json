@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bun ./src/index.ts",
     "start": "bun ./src/index.ts",
-    "lint": "bunx eslint ."
+    "lint": "bunx eslint .",
+    "build":"bun build --entrypoints ./src/index.ts --outdir ./out --target bun"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -19,7 +20,6 @@
     "@libsql/client": "^0.15.5",
     "@types/better-sqlite3": "^7.6.13",
     "axios": "^1.9.0",
-    "better-sqlite3": "^11.9.1",
     "drizzle-orm": "^0.42.0",
     "grammy": "^1.36.1"
   }

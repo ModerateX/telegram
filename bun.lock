@@ -7,7 +7,6 @@
         "@libsql/client": "^0.15.5",
         "@types/better-sqlite3": "^7.6.13",
         "axios": "^1.9.0",
-        "better-sqlite3": "^11.9.1",
         "drizzle-orm": "^0.42.0",
         "grammy": "^1.36.1",
       },
